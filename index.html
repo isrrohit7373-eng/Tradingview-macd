@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>TradingView Mobile Pro Chart + AI Analyzer & Paper Bot</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app" class="app-shell">
+    <!-- TOP OVERALL ANALYZER, REASON TELLER & PAPER BOT BAR -->
+    <div id="analyzerBar" class="analyzer-bar" title="Tap to open Full Analyzer, Paper Trading &amp; Auto-Bot">
+      <div class="az-left">
+        <span class="az-verdict-pill" id="azVerdictPill">WAIT 50%</span>
+        <span class="az-reason-line" id="azReasonLine">Analyzing chart structure &amp; indicators…</span>
+      </div>
+      <div class="az-right">
+        <span class="az-bot-chip" id="azBotChip">
+          <span class="az-bot-dot"></span>
+          <span id="azBotChipText">BOT</span>
+        </span>
+        <span class="az-pnl-chip" id="azPnlChip">$10,000</span>
+        <span class="az-caret">▾</span>
+      </div>
+    </div>
+
+    <!-- EXPANDABLE ANALYZER + PAPER TRADING + AUTO-BOT DRAWER -->
+    <section id="analyzerDrawer" class="analyzer-drawer hidden">
+      <div class="az-drawer-tabs">
+        <button class="az-tab-btn active" data-aztab="analysis">1. Analysis &amp; Plan</button>
+        <button class="az-tab-btn" data-aztab="paper">2. Paper Trade</button>
+        <button class="az-tab-btn" data-aztab="bot">3. Auto-Bot</button>
+      </div>
+      <div class="az-drawer-body" id="azDrawerBody"></div>
+    </section>
+
+    <!-- Main Interactive Canvas Wrapper -->
+    <main class="chart-stage" id="chartStage">
+      <!-- Top Compact Chart HUD -->
+      <header id="topHud" class="top-hud">
+        <div class="hud-row hud-title-row">
+          <div class="symbol-badge" id="headerSymbolBtn">
+            <span class="coin-icon" id="coinIcon">₿</span>
+            <span class="coin-name" id="coinName">Bitcoin / U.S. Dollar</span>
+            <span class="live-dot-wrap" title="Live Binance WebSocket">
+              <span class="live-dot" id="liveDot"></span>
+              <span class="ws-wave">≈</span>
+            </span>
+          </div>
+          <button class="icon-pill-btn" id="cleanChartTopBtn" title="Clean Chart (Hide HUD)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+
+        <div class="hud-row hud-ohlc-row" id="ohlcRow">
+          <span class="ohlc-item">O <b id="valO">--</b></span>
+          <span class="ohlc-item">H <b id="valH">--</b></span>
+          <span class="ohlc-item">L <b id="valL">--</b></span>
+          <span class="ohlc-item">C <b id="valC">--</b></span>
+          <span class="ohlc-chg" id="valChg"></span>
+        </div>
+
+        <div class="hud-row hud-meta-row" id="hudMetaRow">
+          <span class="vol-readout">Vol · <span id="volUnit">BTC</span> <b id="valVol">--</b></span>
+
+          <button class="fx-pill" id="fxPopoverBtn" aria-expanded="false">
+            <span class="fx-italic">fx</span>
+            <span id="fxCount">9/10</span>
+            <span class="fx-caret">▾</span>
+          </button>
+
+          <span class="bias-pill neutral" id="biasPill">● NEUTRAL</span>
+        </div>
+
+        <!-- Collapsible Live Indicator Readout Popover -->
+        <div class="fx-popover hidden" id="fxPopover">
+          <div class="fx-popover-head">
+            <span>Active Indicators</span>
+            <button class="text-link-btn" id="openMasterFromPopover">All Settings ⚙</button>
+          </div>
+          <div class="fx-popover-list" id="fxPopoverList"></div>
+        </div>
+      </header>
+
+      <canvas id="chartCanvas"></canvas>
+
+      <!-- Loading / Status Toast -->
+      <div class="status-toast hidden" id="statusToast">Connecting to Binance…</div>
+
+      <!-- Floating Watermark -->
+      <div class="tv-watermark">TV</div>
+
+      <!-- Jump to Latest Button -->
+      <button class="float-btn jump-latest hidden" id="jumpLatestBtn" title="Jump to Latest Candle">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polyline points="13 17 18 12 13 7"></polyline>
+          <polyline points="6 17 11 12 6 7"></polyline>
+        </svg>
+      </button>
+
+      <!-- Auto-Fit Y-Axis Button -->
+      <button class="auto-badge active" id="autoFitBadge" title="Auto-Fit Price Scale">A</button>
+
+      <!-- Restore HUD Floating Button (visible only in Clean Chart Mode) -->
+      <button class="restore-hud-btn hidden" id="restoreHudBtn" title="Show HUD">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span>HUD</span>
+      </button>
+    </main>
+
+    <!-- Low-Noise Multi-Timeframe Predictive MACD Bottom Strip (Tap to open Full Matrix Page) -->
+    <div class="mtf-strip-bar" id="mtfStripBar" title="Tap to open Multi-Timeframe Predictive MACD Matrix">
+      <span class="mtf-strip-tag">MTF MACD</span>
+      <div class="mtf-strip-pills" id="mtfStripPills">
+        <span class="mtf-mini-pill">Loading 1m·5m·15m·4h…</span>
+      </div>
+    </div>
+
+    <!-- Bottom TradingView Pill Toolbar -->
+    <nav class="bottom-bar" id="bottomBar">
+      <button class="symbol-pill" id="symbolSheetBtn">
+        <span class="pill-coin" id="pillCoinIcon">₿</span>
+        <span class="pill-sym" id="pillSymText">BTCUSDT</span>
+        <span class="pill-tf" id="pillTfText">1m</span>
+      </button>
+
+      <div class="tool-pill-group">
+        <button class="tool-btn" id="mtfPageBtn" title="MTF Predictive MACD Matrix Page">
+          <span class="btn-letter" style="font-size:10.5px;color:#00d4ff;">MTF</span>
+        </button>
+
+        <button class="tool-btn" id="crosshairBtn" title="Toggle Crosshair">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="2" x2="12" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+
+        <button class="tool-btn has-dot" id="indicatorsBtn" title="All Indicators &amp; Settings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 17 9 11 13 15 21 7"></polyline>
+            <polyline points="16 7 21 7 21 12"></polyline>
+          </svg>
+          <span class="active-dot" id="indActiveDot"></span>
+        </button>
+
+        <button class="tool-btn" id="cleanChartBtn" title="Clean Chart (Hide HUD)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+
+        <button class="tool-btn active" id="autoBtn" title="Toggle Auto-Fit Y">
+          <span class="btn-letter">A</span>
+        </button>
+
+        <button class="tool-btn" id="resetViewBtn" title="Reset Zoom &amp; View">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+            <polyline points="3 3 3 8 8 8"></polyline>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Backdrop -->
+    <div class="sheet-backdrop hidden" id="sheetBackdrop"></div>
+
+    <!-- Symbol & Timeframe Bottom Sheet -->
+    <section class="bottom-sheet hidden" id="symbolSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3>Symbol &amp; Timeframe</h3>
+        <button class="sheet-close" data-close="symbolSheet">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="sheet-label">Trading Pair (Live Binance)</div>
+        <div class="chip-grid" id="symbolChipGrid"></div>
+
+        <div class="sheet-label" style="margin-top:16px;">Timeframe</div>
+        <div class="chip-grid tf-grid" id="tfChipGrid"></div>
+      </div>
+    </section>
+
+    <!-- Master All-Indicators Settings Bottom Sheet -->
+    <section class="bottom-sheet tall hidden" id="settingsSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3>Indicators &amp; Settings</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="tune-btn" id="exportZipBtn" style="color:#00e676;border-color:rgba(0,230,118,0.45);background:rgba(8,153,129,0.16);">⬇ Export ZIP</button>
+          <button class="sheet-close" data-close="settingsSheet">✕</button>
+        </div>
+      </div>
+      <div class="tabs-scroller" id="settingsTabs"></div>
+      <div class="sheet-body settings-body" id="settingsBody"></div>
+    </section>
+
+    <!-- SEPARATE MULTI-TIMEFRAME PREDICTIVE MACD MATRIX PAGE + FORMULA LAB -->
+    <section class="mtf-page hidden" id="mtfPage">
+      <header class="mtf-page-header">
+        <div class="mtf-head-top">
+          <button class="mtf-back-btn" id="mtfBackBtn">← Chart</button>
+          <span class="mtf-title" id="mtfPageTitle">▸ MTF PREDICTIVE MACD</span>
+          <button class="formula-lab-btn" id="formulaLabToggleBtn">⚙ FORMULA LAB</button>
+        </div>
+        <div class="mtf-legend-row">
+          <div class="mtf-legend-items">
+            <span style="color:#00d4ff">— MACD</span>
+            <span style="color:#ff9800">— Signal</span>
+            <span style="color:#00e676">◆ Cross</span>
+            <span style="color:#a8ff3e">◎ Imminent</span>
+            <span style="color:#e066ff">▲▼ Dual Trend</span>
+          </div>
+          <span style="font-size:10px;color:#787b86" id="mtfSyncLabel">Live Sync</span>
+        </div>
+      </header>
+
+      <div class="mtf-page-scroll" id="mtfPageScroll">
+        <!-- Custom Formula Lab Panel (Collapsible) -->
+        <div class="mtf-formula-panel hidden" id="mtfFormulaPanel"></div>
+
+        <!-- Innovative Pre-Cross Early Execution Radar -->
+        <div class="mtf-radar-card" id="mtfRadarCard"></div>
+
+        <!-- 1M / 5M / 15M / 4H Predictive MACD Matrix Cards -->
+        <div id="mtfCardsContainer" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </section>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
